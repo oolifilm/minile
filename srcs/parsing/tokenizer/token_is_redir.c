@@ -6,11 +6,26 @@
 /*   By: leaugust <leaugust@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/02/28 23:09:13 by julien            #+#    #+#             */
-/*   Updated: 2025/03/06 15:07:42 by leaugust         ###   ########.fr       */
+/*   Updated: 2025/03/07 18:19:57 by leaugust         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../../../include/minishell.h"
+
+static int	check_redir_error(char *input, int *i)
+{
+	(*i)++;
+	while (input[*i] && input[*i] == ' ')
+		(*i)++;
+	if (!input[*i] || input[*i] == '|' || input[*i] == '<' || input[*i] == '>'
+		|| input[*i] == '\n')
+	{
+		ft_putstr_fd("minishell: syntax error near unexpected token 'newline'\n",
+			2);
+		return (1);
+	}
+	return (0);
+}
 
 /*
 __Fonctionnement :__
@@ -24,6 +39,7 @@ Extrait le nom d’un fichier après un opérateur de redirection (>>, <<).
 5. L'ajoute à la liste des tokens en tant que REDIR_FILE.
 6. Libère la mémoire allouée.
 */
+
 static void	get_redir_file(char *input, int *i, t_token_list *tokens)
 {
 	int		start;
@@ -68,7 +84,7 @@ static void	handle_output_redir(char *input, int *i, t_token_list *tokens)
 	temp[2] = '\0';
 	if (input[*i + 1] == '>' && input[*i + 2] == '>')
 	{
-		ft_putstr_fd("minishell: syntax error near unexpected token `>'\n", 2);
+		ft_putstr_fd("minishell: syntax error near unexpected token '>>'\n", 2);
 		*i = ft_strlen(input);
 		return ;
 	}
@@ -84,6 +100,8 @@ static void	handle_output_redir(char *input, int *i, t_token_list *tokens)
 		temp[0] = input[*i];
 		add_token(tokens, temp, REDIR_OUTPUT);
 	}
+	if (check_redir_error(input, i))
+		return ;
 	get_redir_file(input, i, tokens);
 }
 
@@ -108,7 +126,7 @@ static void	handle_input_redir(char *input, int *i, t_token_list *tokens)
 	temp[2] = '\0';
 	if (input[*i + 1] == '<' && input[*i + 2] == '<')
 	{
-		ft_putstr_fd("minishell: syntax error near unexpected token `<'\n", 2);
+		ft_putstr_fd("minishell: syntax error near unexpected token '<<'\n", 2);
 		*i = ft_strlen(input);
 		return ;
 	}
@@ -118,12 +136,16 @@ static void	handle_input_redir(char *input, int *i, t_token_list *tokens)
 		temp[1] = input[*i + 1];
 		add_token(tokens, temp, HEREDOC);
 		(*i)++;
+		if (check_redir_error(input, i))
+			return ;
 	}
 	else
 	{
 		temp[0] = input[*i];
 		add_token(tokens, temp, REDIR_INPUT);
 	}
+	if (check_redir_error(input, i))
+		return ;
 	get_redir_file(input, i, tokens);
 }
 
@@ -135,6 +157,7 @@ Détecte si le caractère actuel dans input est un symbole de redirection.
 1. Appelle handle_output_redir si c'est > pour gérer la redirection de sortie.
 2. Appelle handle_input_redir si c'est < pour gérer la redirection d'entrée.
 */
+
 void	assign_redirection(char *input, int *i, t_token_list *tokens)
 {
 	if (input[*i] == '>')
